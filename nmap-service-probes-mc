@@ -1,0 +1,6 @@
+##############################NEXT PROBE##############################
+Probe TCP minecraft-ping q|\xFE\x01|
+rarity 8
+ports 25565
+
+match minecraft m|\x00\x00(.+?)\x00\x00(.+?)\x00\x00(.+?)\x00\x00(.+?)\x00\x00(.+?)$|s p/Minecraft/ v/$P(2)/ i|Protocol: $P(1), Message: $P(3), Users: $P(4)/$P(5)|
