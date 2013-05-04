@@ -1,11 +1,6 @@
 #!/usr/bin/perl
 #Version 1.1 of Minecraft ping scanner
-#This version adds the ability to take nmap outputs of -oG as an input to this script
-#Next version will clean the code up a little (organize with some subs maybe).
-#I will also add some documentation.
-#There will likely be large bug fixes, I'm sure I'll see unexpected things in -->
-#things in -oG files, or get odd things back from minecraft servers that I -->
-#didn't anticipate to parse
+#This version added some documentation and fixed a bug with iplist as input
 use strict;
 use warnings;
 use IO::Socket;
@@ -16,11 +11,13 @@ use Getopt::Long;
 my ($protocol, $version, $message, $people, $capacity, $recv, $server);
 #These are vars for the input file, either a line by line list of ip's, or
 #an -oG output from Nmap
-my ($iplist,$nmap) = 0;
+my ($iplist,$nmap) = (0,0);
 my @servers;
 
 GetOptions('iplist=s' => \$iplist,		#get list of IP addresses
 		'nmap=s' => \$nmap);			#get lines from nmap
+
+docs();
 
 if (($iplist ne 0) && ($nmap ne 0)) {
 	print "Woah, wait a second, did you want a normal IP list, or an nmap -oG output list, because we can't have both\n";
@@ -30,7 +27,7 @@ if (($iplist ne 0) && ($nmap ne 0)) {
 #this is the simple way to give this script IP's; just a text file with IP's
 if ($iplist ne 0) {
     open IPS, "$iplist";	
-    my @servers = <IPS>;	#make array of IP's from file handle
+    @servers = <IPS>;	#make array of IP's from file handle
 }
 
 if ($nmap ne 0) {
@@ -54,7 +51,6 @@ my $decrementer = $hosts;	#used for the while loop
 
 #Print Header (especially handy for CSV's)
 print "Server,Protocol,Version,People,Capacity,Message of the Day\n";
-
 #This while loop will go through all IP's and probe them
 while ($decrementer gt 0) {
 	#Set up socket for the current IP
@@ -82,10 +78,26 @@ while ($decrementer gt 0) {
 	$decrementer--;		#on to the next
 }
 
-#A typical nmap scan that provides a good input to this script.
-#I used -iL ips.txt with a known-open list of minecraft IP's.
-#I would probably do this even after scanning a large CIDR range just
-#to scrub the possible servers that went dead since. This would take
-#some load off of the minecraft.pl script (so it's not probing dead hosts)
-#In other words, let nmap do what it's good at.
-#sudo nmap -sV -PN -p 25565 -iL ips.txt -oG results.txt
+
+sub docs {		#if no options are selected, print this information on how to use the tool
+	if (($iplist eq 0) && ($nmap eq 0)) { 
+		print "\nMinecraft Pinger\n";
+		print "USAGE: minecraft.pl {--iplist=list_of_ips.txt} {--nmap=oG_nmap_output.txt}\n\n";
+		print "OPTIONS:\n";
+		print "\t--iplist: provide a text file with a list of IP addresses. One IP on each\n";
+		print "\t\teach line.";
+		print "\t--nmap: Provide the file that nmap outputs with the -oG options. This file\n";
+		print "\t\tmay contain IP's that happen to be open, this script will parse the open\n";
+		print "\t\tones. This is preferable, as you likely go into the script with listening\n";
+		print "\t\tIP's; the idea is that this will go quicker.\n\n";
+		print "EXAMPLES:\n";
+		print "\tminecraft.pl --iplist=myips.txt\n";
+		print "\t\tThis feeds the IP addresses contained in myips.txt into this script\n";
+		print "\tminecraft.pl --nmap=nmap_results.txt\n";
+		print "\t\tThis feeds the output of nmap with the -oG option into this script\n";
+		print "\tsudo nmap -PN -p 25565 -iL ips.txt -oG nmap_results.txt\n";
+		print "\t\tThis is a run of nmap to get good results to feed into the minecraft.pl\n";
+		print "\t\tscript. you could us an actual CIDR IP range instead of -iL ips.txt\n";
+		exit 0;
+	}
+}
